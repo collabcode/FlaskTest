@@ -31,6 +31,7 @@ def menu():
              for db in client.database_names())
     return jsonify(list=d)
 
+#test
 
 @app.route("/add/collection/<name>")
 def addCollection(name):
