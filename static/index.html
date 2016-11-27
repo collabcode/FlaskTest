@@ -4,15 +4,15 @@
 <link rel="stylesheet" href="/static/bootstrap-3.3.7-dist/css/bootstrap.min.css" />
 <script src="/static/bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
 
-<body>
+<body style="font-size:10px">
     <div class="container">
         Hello Ramesh
         <div id="menu"></div>
         <div class="row">
-            <div class="col-xs-6 col-md-6">
+            <div >
                 <div id="results"></div>
             </div>
-            <div class="col-xs-6 col-md-6">
+            <div >
                 <div id="details"></div>
             </div>
         </div>
@@ -24,7 +24,7 @@
                         <ul class="nav nav-pills">
                             {{#each list}}
                               {{#each this}}
-                                        <li role="presentation"><a href="#{{this}}" onclick="loadCollection('{{this}}');this.className='active'">{{this}}</a></li>
+                                        <li role="presentation"><a href="#{{this}}" onclick="loadCollection('{{this}}',0,'');this.className='active'">{{this}}</a></li>
                             {{/each}}
                             {{/each}}
                                 <li role="presentation"><a href="#" onclick="addCollection()" class="glyphicon glyphicon-plus"></a> </li>
@@ -34,12 +34,21 @@
 
     <script id="results-template" type="text/x-handlebars-template">
                     <div class="results">
-                        <div class="panel panel-default">
+                        <div class="panel panel-default row">
+                                
+                            <div class="input-group">
+                            <input id="resultsearchbox" type="text" class="form-control" placeholder="Search for...">
+                            <span class="input-group-btn">
+                                <button class="btn btn-default" type="button" onclick="loadCollection(currentCollection,0,$('#resultsearchbox').val());">Go!</button>
+                            </span>
+                            </div>
               <!-- Default panel contents -->
               <div class="panel-heading">Records in the Collection
                 <span><a href="#" onclick="addRecord()" class="glyphicon glyphicon-plus"></a> </span>
               </div>
-                        <table class="table table-bordered table-condensed">
+                    </div>
+                        </div>
+                        <table id="resultstable" class="table table-bordered table-condensed" style="font-size:10px">
 
                             <tr>
                           {{#each list.[0]}}
@@ -60,8 +69,6 @@
                             </tr>
                         {{/each}}
                             </table>
-                    </div>
-                        </div>
                 </script>
 
     <script id="details-template" type="text/x-handlebars-template">
@@ -106,17 +113,35 @@
 
                 });
 
-                function loadCollection(name){
+                function loadCollection(name,pageno,q){
 
-                    $.getJSON('/data/'+name, function (data) {
+                    $.getJSON('/data/'+name + '?pageno=' + pageno + '&q=' + q, function (data) {
 
                         var source   = $("#results-template").html();
                         var template = Handlebars.compile(source);
 
                         var html = template(data);
+
                         $('#results').html(html);
                         currentCollection=name;
+
+                        var idIndex =-1;
+                        for(i=0; i< document.getElementById("resultstable").rows[0].cells.length;i++){
+                            if(document.getElementById("resultstable").rows[0].cells[i].innerText=='_id')
+                            {
+                                idIndex = i;
+                            }
+                        }
+                        if(idIndex>-1)
+                        {
+                            for(i=1;i<document.getElementById("resultstable").rows.length;i++){
+                                id = document.getElementById("resultstable").rows[i].cells[idIndex].innerText;
+                                document.getElementById("resultstable").rows[i].cells[idIndex].innerHTML = "<a href='#' onClick='openRecord(\"" + id + "\")' class='glyphicon glyphicon-chevron-right'></a>"
+                            }
+                        }
+                        $('#resultsearchbox').val(q)
                       });
+                      
                 }
 
                 function openRecord(id){
@@ -129,6 +154,15 @@
                         var html = template(data);
                         $('#details').html(html);
                         currentRecord = id;
+
+                        elements = (document.getElementById('details')).getElementsByClassName('form-group');
+                        for(i=0;i<elements.length;i++)
+                        {
+                            if(elements[i].getElementsByTagName('label')[0].innerText == '_id')
+                            {
+                                elements[i].style='visibility:hidden;display:none';
+                            }
+                        }
                       });
                 }
 
@@ -137,7 +171,7 @@
                     $.getJSON('/add/collection/'+name, function (data) {
                         var html = data;
                         alert(data);
-                        loadCollection(name);
+                        loadCollection(name,0,'');
                       });
                 }
 
