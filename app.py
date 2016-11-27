@@ -6,7 +6,7 @@ app.debug = True
 
 
 client = MongoClient('localhost:27017')
-db = client.MachineData
+
 
 
 @app.route("/")
@@ -16,18 +16,29 @@ def home():
 
 @app.route("/data/<name>/<id>")
 def details(name,id):
+    collectionname = name.split('.',1)[1]
+    databasename =name.split('.',1)[0]
     try:
-        objs = db[name].find({"_id" : ObjectId(id)})
+        objs = client[databasename][collectionname].find({"_id" : ObjectId(id)})
 
     except Exception as e:
-        return str(e)
+        try:
+            if id.isdigit():
+                objs = client[databasename][collectionname].find({"_id" : int(id)})
+            
+            elif id.replace('.','',1).isdigit():
+                objs = client[databasename][collectionname].find({"_id" : float(id)})
+            else:
+                objs = client[databasename][collectionname].find({"_id" : id})
+        except Exception as e:
+            return str(e)
     return jsonify(details=prepareResponse(objs))
 
 
 @app.route("/menu")
 def menu():
 
-    d = dict((db, [collection for collection in client[db].collection_names()])
+    d = dict((db, [db + '.' + collection   for collection in client[db].collection_names()])
              for db in client.database_names())
     return jsonify(list=d)
 
@@ -35,9 +46,13 @@ def menu():
 
 @app.route("/add/collection/<name>")
 def addCollection(name):
+    collectionname = name.split('.',1)[1]
+    databasename =name.split('.',1)[0]
     post = {}
-    d = db[name].insert_one(post).inserted_id
+    d = client[databasename][collectionname].insert_one(post).inserted_id
+    client[databasename][collectionname].createIndex( { "$**": "text" } )
     return jsonify(result=prepareResponse(d))
+
 
 def prepareResponse(objs):
     objList = []
@@ -45,12 +60,11 @@ def prepareResponse(objs):
         for obj in objs:
             objItem = {}
             for n in obj:
-                if n != "_id":
+                if isinstance(n, ObjectId):
                     objItem[n] = obj[n]
                 else:
-                    objItem["Action"] = "<a href='#' onClick='openRecord(\"" + str(obj[n]) + "\")' class='glyphicon glyphicon-chevron-right'></a>"
-                    #objItem[n] = str(obj[n])
-
+                    #objItem["Action"] = "<a href='#' onClick='openRecord(\"" + str(obj[n]) + "\")' class='glyphicon glyphicon-chevron-right'></a>"
+                    objItem[n] = str(obj[n])
             objList.append(objItem)
     except Exception as e:
         1
@@ -58,8 +72,18 @@ def prepareResponse(objs):
 
 @app.route("/data/<name>")
 def list(name):
+    collectionname = name.split('.',1)[1]
+    databasename =name.split('.',1)[0]
+    
+    pageno = request.args.get('pageno')
+    if pageno =='':
+        pageno = 0
+    q = request.args.get('q')
+    query= {}
+    if len(q)>0:
+        query =  { '$text': { '$search': q, '$caseSensitive': True } }
     try:
-        objs = db[name].find()
+        objs = client[databasename][collectionname].find(query).skip(int(pageno)*10).limit (10)
     except Exception as e:
         return str(e)
     return jsonify(list=prepareResponse(objs))
