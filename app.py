@@ -3,7 +3,7 @@ from bson.objectid import ObjectId
 from flask import Flask,render_template,jsonify,json,request
 app = Flask(__name__, static_url_path='/static')
 app.debug = True
-
+ 
 
 client = MongoClient('localhost:27017')
 
