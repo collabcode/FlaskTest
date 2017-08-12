@@ -4,7 +4,7 @@ from flask import Flask,render_template,jsonify,json,request
 app = Flask(__name__, static_url_path='/static')
 app.debug = True
  
-
+#this is test
 client = MongoClient('localhost:27017')
 
 
